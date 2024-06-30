@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 import 'package:todo/screens/add_page.dart';
 import 'package:http/http.dart' as http;
+import 'package:todo/services/todo_service.dart';
+import 'package:todo/widget/todo_card.dart';
 
 class TodoListPage extends StatefulWidget {
   const TodoListPage({super.key});
@@ -44,15 +45,11 @@ class _TodoListPageState extends State<TodoListPage> {
   }
 
   Future<void> fetchTodo() async {
-    final url = 'https://api.nstack.in/v1/todos?page=1&limit=10';
-    final uri = Uri.parse(url);
-    final response = await http.get(uri);
+    final response = await TodoService.fetchTodos();
 
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body) as Map;
-      final result = json['items'] as List;
+    if (response != null) {
       setState(() {
-        items = result;
+        items = response;
       });
     }
 
@@ -62,11 +59,9 @@ class _TodoListPageState extends State<TodoListPage> {
   }
 
   Future<void> deleteById(String id) async {
-    final url = 'https://api.nstack.in/v1/todos/$id';
-    final uri = Uri.parse(url);
-    final response = await http.delete(uri);
+    final isSuccess = await TodoService.deleteById(id);
 
-    if (response.statusCode == 200) {
+    if (isSuccess) {
       final filtered = items.where((element) => element['_id'] != id).toList();
       setState(() {
         items = filtered;
@@ -94,41 +89,27 @@ class _TodoListPageState extends State<TodoListPage> {
         ),
         replacement: RefreshIndicator(
           onRefresh: fetchTodo,
-          child: ListView.builder(
-              itemCount: items.length,
-              itemBuilder: (context, index) {
-                final item = items[index] as Map;
-                final id = item['_id'] as String;
-                return ListTile(
-                  leading: CircleAvatar(
-                    child: Text('${index + 1}'),
-                  ),
-                  title: Text(item['title']),
-                  subtitle: Text(item['description']),
-                  trailing: PopupMenuButton(
-                    onSelected: (value) {
-                      if (value == 'edit') {
-                        navigateToEditPage(item);
-                      } else if (value == 'delete') {
-                        // Delete and remove this item
-                        deleteById(id);
-                      }
-                    },
-                    itemBuilder: (context) {
-                      return [
-                        PopupMenuItem(
-                          child: Text('Edit'),
-                          value: 'edit',
-                        ),
-                        PopupMenuItem(
-                          child: Text('Delete'),
-                          value: 'delete',
-                        ),
-                      ];
-                    },
-                  ),
-                );
-              }),
+          child: Visibility(
+            visible: items.isNotEmpty,
+            replacement: Center(
+              child: Text(
+                'No Todo Item',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+            ),
+            child: ListView.builder(
+                itemCount: items.length,
+                padding: EdgeInsets.all(8),
+                itemBuilder: (context, index) {
+                  final item = items[index] as Map;
+                  final id = item['_id'] as String;
+                  return ToDoCard(
+                      index: index,
+                      item: item,
+                      navigateEdit: navigateToEditPage,
+                      deleteById: deleteById);
+                }),
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
