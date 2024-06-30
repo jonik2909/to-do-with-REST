@@ -16,9 +16,31 @@ class _TodoListPageState extends State<TodoListPage> {
   bool isLoading = true;
   List items = [];
 
-  void navigateToAddPage() {
-    final route = MaterialPageRoute(builder: (context) => AddTodoPage());
-    Navigator.push(context, route);
+  Future<void> navigateToAddPage() async {
+    Navigator.of(context)
+        .push(
+      MaterialPageRoute(
+        builder: (context) => AddTodoPage(),
+      ),
+    )
+        .then((_) {
+      setState(() {
+        isLoading = true;
+      });
+      fetchTodo();
+    });
+  }
+
+  Future<void> navigateToEditPage(Map item) async {
+    Navigator.of(context)
+        .push(
+      MaterialPageRoute(
+        builder: (context) => AddTodoPage(todo: item),
+      ),
+    )
+        .then((_) {
+      fetchTodo();
+    });
   }
 
   Future<void> fetchTodo() async {
@@ -86,7 +108,7 @@ class _TodoListPageState extends State<TodoListPage> {
                   trailing: PopupMenuButton(
                     onSelected: (value) {
                       if (value == 'edit') {
-                        // Open Edit Page
+                        navigateToEditPage(item);
                       } else if (value == 'delete') {
                         // Delete and remove this item
                         deleteById(id);
